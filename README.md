@@ -13,6 +13,11 @@ bash run.sh
 ```
 ## 2. Chạy chương trình
 
+1. Chạy môi trường
+```bash
+source venv/bin/activate
+```
+
 1. Tạo 1 terminal chạy server.py
 ```bash
 python3 server.py
