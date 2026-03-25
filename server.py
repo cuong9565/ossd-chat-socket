@@ -3,7 +3,7 @@ import threading
 from datetime import datetime
 import json
 
-HOST = '127.0.0.1'
+HOST = '0.0.0.0'
 PORT = 8085
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))

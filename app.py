@@ -16,7 +16,7 @@ st_autorefresh(interval=1000, key="autorefresh")
 # =========================
 # GLOBAL STATE
 # =========================
-HOST = '127.0.0.1'
+HOST = '192.168.43.157'
 PORT = 8085
 
 if "initialized" not in st.session_state:

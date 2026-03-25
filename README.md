@@ -18,12 +18,18 @@ bash run.sh
 source venv/bin/activate
 ```
 
-1. Tạo 1 terminal chạy server.py
+2. Tạo 1 terminal chạy server.py
 ```bash
 python3 server.py
 ```
 
-2. Tạo 1 terminal chạy app.py
+3. Tạo 1 terminal chạy app.py
 ```bash
 streamlit run app.py
+```
+
+4. Kết nối mạng
+```bash
+netsh interface portproxy add v4tov4 listenport=8085 listenaddress=0.0.0.0 connectport=8085 connectaddress=172.23.66.124
+netsh advfirewall firewall add rule name="Open 8085" dir=in action=allow protocol=TCP localport=8085
 ```
