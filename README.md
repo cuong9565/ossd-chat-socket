@@ -31,5 +31,5 @@ streamlit run app.py
 4. Kết nối mạng
 ```bash
 netsh interface portproxy add v4tov4 listenport=8085 listenaddress=0.0.0.0 connectport=8085 connectaddress=172.23.66.124
-netsh advfirewall firewall add rule name="Open 8085" dir=in action=allow protocol=TCP localport=8085
+netsh advfirewall firewall add rule name="Open 8086" dir=in action=allow protocol=TCP localport=8086
 ```

@@ -1,68 +1,60 @@
-
 import streamlit as st
 import socket
 import threading
 import json
 import queue
-import time
 from streamlit_autorefresh import st_autorefresh
 
-
 # =========================
-# AUTO REFRESH UI sử dụng st_autorefresh
+# CẤU HÌNH & REFRESH
 # =========================
+st.set_page_config(page_title="Socket Chat", page_icon="💬")
 st_autorefresh(interval=1000, key="autorefresh")
 
-# =========================
-# GLOBAL STATE
-# =========================
-HOST = '192.168.43.157'
+HOST = '192.168.213.220' 
 PORT = 8085
 
+# =========================
+# KHỞI TẠO SESSION STATE
+# =========================
 if "initialized" not in st.session_state:
-    st.session_state.initialized = True
-
-    # socket
-    st.session_state.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    st.session_state.client_socket.connect((HOST, PORT))
-
-    # data
     st.session_state.messages = []
-    st.session_state.running = True
     st.session_state.msg_queue = queue.Queue()
+    
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((HOST, PORT))
+        st.session_state.client_socket = client_socket
+        st.session_state.initialized = True # Đánh dấu thành công
+    except Exception as e:
+        st.error(f" Không thể kết nối tới Server ({HOST}:{PORT}). Lỗi: {e}")
+        st.stop() # Dừng app nếu không kết nối được
 
 # =========================
 # THREAD NHẬN DATA
 # =========================
-def receive(client_socket, msg_queue):
+def receive_thread_func(sock, q):
     buffer = ""
     while True:
-        data = client_socket.recv(1024).decode()
-        if not data:
-            continue
-        buffer += data
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            if not line.strip():
-                continue
-            msg = json.loads(line)
-            formatted = f"[{msg['time']}] {msg['ip']}:{msg['port']}: {msg['content']}"
-            msg_queue.put(formatted)
+        try:
+            data = sock.recv(1024).decode('utf-8')
+            if not data:
+                break
+            buffer += data
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                if line.strip():
+                    msg_json = json.loads(line)
+                    # Lưu tin nhắn theo định dạng đẹp hơn
+                    formatted = f"[{msg_json['time']}] {msg_json['ip']}:{msg_json['port']} -> {msg_json['content']}"
+                    q.put(formatted)
+        except:
+            break
 
-def send_message():
-    msg = st.session_state.input.strip()
-
-    if msg:
-        st.session_state.client_socket.send((msg + "\n").encode())
-
-    st.session_state.input = ""
-
-# =========================
-# START THREAD 1 LẦN
-# =========================
-if "thread_started" not in st.session_state:
+# Chạy Thread nhận tin nhắn (chỉ chạy 1 lần duy nhất)
+if "thread_started" not in st.session_state and st.session_state.get("initialized"):
     thread = threading.Thread(
-        target=receive,
+        target=receive_thread_func,
         args=(st.session_state.client_socket, st.session_state.msg_queue),
         daemon=True
     )
@@ -70,21 +62,38 @@ if "thread_started" not in st.session_state:
     st.session_state.thread_started = True
 
 # =========================
-# UI
+# LOGIC XỬ LÝ TIN NHẮN
 # =========================
-st.title(":material/chat_bubble: Chat Client")
+def send_message():
+    # Lấy dữ liệu từ widget có key="user_input"
+    msg_text = st.session_state.user_input.strip()
+    if msg_text:
+        try:
+            st.session_state.client_socket.send((msg_text + "\n").encode('utf-8'))
+            st.session_state.user_input = "" # Xóa input sau khi gửi
+        except Exception as e:
+            st.error(f"Lỗi gửi tin nhắn: {e}")
 
-
-# Lấy tin nhắn mới từ queue và thêm vào messages
+# Lấy tin nhắn mới từ queue chuyển vào list messages
 while not st.session_state.msg_queue.empty():
-    new_msg = st.session_state.msg_queue.get()
-    st.session_state.messages.append(new_msg)
+    st.session_state.messages.append(st.session_state.msg_queue.get())
 
-# Chat History
-for msg in st.session_state.messages:
-    st.markdown(f"💬 {msg}")
+# =========================
+# GIAO DIỆN (UI)
+# =========================
+st.title(" Socket Chat Client")
 
-# Send message
-col1, col2 = st.columns([4, 1])
-user_input = col1.text_input("Nhập tin nhắn", key="input", label_visibility="collapsed")
-col2.button("Gửi", on_click=send_message)
+# Hiển thị lịch sử chat
+chat_container = st.container(height=400, border=True)
+with chat_container:
+    if not st.session_state.messages:
+        st.info("Chưa có tin nhắn nào.")
+    for msg in st.session_state.messages:
+        st.write(msg)
+
+    # Khu vực nhập tin nhắn
+if prompt := st.chat_input("Nhập nội dung tin nhắn..."):
+    try:
+        st.session_state.client_socket.send((prompt + "\n").encode('utf-8'))
+    except Exception as e:
+        st.error(f"Lỗi gửi: {e}")

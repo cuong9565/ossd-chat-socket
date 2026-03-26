@@ -28,7 +28,7 @@ class Message:
     def to_dict(self):
         return {
             "time": self.time,
-            "ip": self.addr[0],
+            "ip": 'Client',
             "port": self.addr[1],
             "content": self.content
         }
